@@ -120,7 +120,19 @@ extern "C"
    */
   void parse_args(int argc, char **argv);
 
+  void print_history();
 
+  void initialize_jobs();
+
+  int add_job(pid_t pid, char *command, bool is_background);
+
+  void remove_job(int job_id);
+
+  void update_job_status();
+
+  void print_jobs();
+
+  int execute_command(char **argv, struct shell *sh);
 
 #ifdef __cplusplus
 } // extern "C"
