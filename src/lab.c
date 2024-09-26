@@ -1,3 +1,14 @@
+/**
+ * @file lab.c
+ * @author Waylon Walsh
+ * @brief Implementation of a simple shell with job control
+ * @date 2023-09-26
+ *
+ * This file contains the implementation of various functions required
+ * for a simple shell, including job control, command parsing, and
+ * execution of both built-in and external commands.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,20 +23,29 @@
 #include <sys/wait.h>
 #include <dirent.h>
 #include "lab.h"
+#include <getopt.h> 
 
-#define MAX_JOBS 100
+#define MAX_JOBS 100 // Maximum number of jobs that can be managed
 
+/**
+ * @brief Structure to represent a job in the shell
+ */
 struct job {
-    int job_id;
-    pid_t pid;
-    char *command;
-    bool is_background;
-    bool is_done;
+    int job_id;         // Unique identifier for the job
+    pid_t pid;          // Process ID of the job
+    char *command;      // Command string of the job
+    bool is_background; // Flag to indicate if it's a background job
+    bool is_done;       // Flag to indicate if the job is completed
 };
 
-struct job jobs[MAX_JOBS];
-int next_job_id = 1;
+struct job jobs[MAX_JOBS];  // Array to store all jobs
+int next_job_id = 1;        // Counter for assigning job IDs
 
+/**
+ * @brief Initialize the jobs array
+ *
+ * This function sets up the jobs array with default values.
+ */
 void initialize_jobs() {
     for (int i = 0; i < MAX_JOBS; i++) {
         jobs[i].job_id = 0;
@@ -36,6 +56,14 @@ void initialize_jobs() {
     }
 }
 
+/**
+ * @brief Add a new job to the jobs array
+ *
+ * @param pid Process ID of the new job
+ * @param command Command string of the job
+ * @param is_background Flag indicating if it's a background job
+ * @return int Job ID of the newly added job, or -1 if no space available
+ */
 int add_job(pid_t pid, char *command, bool is_background) {
     for (int i = 0; i < MAX_JOBS; i++) {
         if (jobs[i].job_id == 0) {
@@ -50,6 +78,11 @@ int add_job(pid_t pid, char *command, bool is_background) {
     return -1; // No space for new job
 }
 
+/**
+ * @brief Remove a job from the jobs array
+ *
+ * @param job_id ID of the job to be removed
+ */
 void remove_job(int job_id) {
     for (int i = 0; i < MAX_JOBS; i++) {
         if (jobs[i].job_id == job_id) {
@@ -64,6 +97,11 @@ void remove_job(int job_id) {
     }
 }
 
+/**
+ * @brief Update the status of all jobs
+ *
+ * This function checks the status of all jobs and updates them accordingly.
+ */
 void update_job_status() {
     for (int i = 0; i < MAX_JOBS; i++) {
         if (jobs[i].job_id != 0 && !jobs[i].is_done) {
@@ -77,6 +115,11 @@ void update_job_status() {
     }
 }
 
+/**
+ * @brief Print all jobs
+ *
+ * This function prints the status of all jobs in the jobs array.
+ */
 void print_jobs() {
     for (int i = 0; i < MAX_JOBS; i++) {
         if (jobs[i].job_id != 0) {
@@ -89,6 +132,15 @@ void print_jobs() {
     }
 }
 
+/**
+ * @brief Get the shell prompt
+ *
+ * This function returns the shell prompt, either from an environment variable
+ * or a default value.
+ *
+ * @param env Name of the environment variable to check for custom prompt
+ * @return char* The shell prompt string
+ */
 char *get_prompt(const char *env) {
     char* custom_prompt = getenv(env);
     if (custom_prompt != NULL) {
@@ -97,6 +149,12 @@ char *get_prompt(const char *env) {
     return strdup("shell>");
 }
 
+/**
+ * @brief Parse a command line into an array of arguments
+ *
+ * @param line The command line to parse
+ * @return char** Array of parsed arguments
+ */
 char **cmd_parse(const char *line) {
     if (line == NULL) return NULL;
 
@@ -142,6 +200,11 @@ char **cmd_parse(const char *line) {
     return tokens;
 }
 
+/**
+ * @brief Free the memory allocated by cmd_parse
+ *
+ * @param tokens The array of tokens to free
+ */
 void cmd_free(char **tokens) {
     if (tokens == NULL) return;
 
@@ -149,13 +212,19 @@ void cmd_free(char **tokens) {
     free(tokens);
 }
 
+/**
+ * @brief Trim whitespace from the beginning and end of a string
+ *
+ * @param line The string to trim
+ * @return char* The trimmed string
+ */
 char *trim_white(char *line) {
     if (line == NULL) return NULL;
 
     // Trim leading space
     while(isspace((unsigned char)*line)) line++;
 
-    if(*line == 0)  // All spaces?
+    if(*line == 0)  // will be true if original string was composed entirely of spaces
         return line;
 
     // Trim trailing space
@@ -168,6 +237,16 @@ char *trim_white(char *line) {
     return line;
 }
 
+
+/**
+ * @brief Handle built-in shell commands
+ *
+ * This function checks if a command is built-in and executes it if so.
+ *
+ * @param sh Pointer to the shell structure
+ * @param argv Array of command arguments
+ * @return true if the command was a built-in command, false otherwise
+ */
 bool do_builtin(struct shell *sh, char **argv) {
     if (argv == NULL || argv[0] == NULL) return false;
 
@@ -212,6 +291,15 @@ bool do_builtin(struct shell *sh, char **argv) {
     return false;  // Not a builtin command
 }
 
+/**
+ * @brief Execute a command
+ *
+ * This function forks a new process to execute the given command.
+ *
+ * @param argv Array of command arguments
+ * @param sh Pointer to the shell structure
+ * @return int Status of the command execution
+ */
 int execute_command(char **argv, struct shell *sh) {
     if (argv == NULL || argv[0] == NULL) {
         return 1;
@@ -277,6 +365,12 @@ int execute_command(char **argv, struct shell *sh) {
     return 1;
 }
 
+/**
+ * @brief Change the current working directory
+ *
+ * @param argv Array of command arguments (argv[1] is the target directory)
+ * @return int 0 on success, -1 on failure
+ */
 int change_dir(char **argv) {
     char *new_dir;
     
@@ -311,6 +405,13 @@ int change_dir(char **argv) {
     return 0;
 }
 
+/**
+ * @brief Initialize the shell
+ *
+ * This function sets up the shell's terminal settings and signal handlers.
+ *
+ * @param sh Pointer to the shell structure to initialize
+ */
 void sh_init(struct shell *sh) {
     sh->shell_terminal = STDIN_FILENO;
     sh->shell_is_interactive = isatty(sh->shell_terminal);
@@ -338,6 +439,14 @@ void sh_init(struct shell *sh) {
     initialize_jobs();
 }
 
+/**
+ * @brief Destroy the shell and free associated resources
+ *
+ * This function is responsible for cleaning up resources allocated by the shell.
+ * It frees the memory allocated for the shell prompt and clears the command history.
+ *
+ * @param sh Pointer to the shell structure to be destroyed
+ */
 void sh_destroy(struct shell *sh) {
     if (sh->prompt) {
         free(sh->prompt);
@@ -345,6 +454,13 @@ void sh_destroy(struct shell *sh) {
     clear_history();  // Clear readline history
 }
 
+/**
+ * @brief Print the command history
+ *
+ * This function prints out the entire command history of the shell session.
+ * It uses the readline library's history functions to access and display
+ * each command in the history list.
+ */
 void print_history() {
     HIST_ENTRY **the_history;
     int i;
@@ -357,9 +473,27 @@ void print_history() {
     }
 }
 
-void parse_args(int argc, char **argv) {
-    // This function can be implemented if you need to parse command-line arguments
-    // for the shell itself (not for the commands run within the shell)
-    (void)argc;  // Silence unused parameter warning
-    (void)argv;  // Silence unused parameter warning
+/**
+ * @brief Parse command-line arguments for the shell
+ *
+ * This function handles the -v command-line argument, which prints
+ * the shell version. It uses getopt to parse arguments.
+ *
+ * @param argc The number of command-line arguments
+ * @param argv An array of strings containing the command-line arguments
+ * @return bool True if the shell should exit after parsing args, false otherwise
+ */
+bool parse_args(int argc, char **argv) {
+    int opt;
+    while ((opt = getopt(argc, argv, "v")) != -1) {
+        switch (opt) {
+            case 'v':
+                printf("Shell version %d.%d\n", lab_VERSION_MAJOR, lab_VERSION_MINOR);
+                return true;  // Indicate that the shell should exit
+            default:
+                fprintf(stderr, "Usage: %s [-v]\n", argv[0]);
+                exit(1);
+        }
+    }
+    return false;  // Indicate that the shell should continue running
 }

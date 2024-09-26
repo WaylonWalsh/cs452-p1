@@ -112,26 +112,63 @@ extern "C"
    */
   void sh_destroy(struct shell *sh);
 
-  /**
-   * @brief Parse command line args from the user when the shell was launched
-   *
-   * @param argc Number of args
-   * @param argv The arg array
-   */
-  void parse_args(int argc, char **argv);
+/**
+ * @brief Parse command-line arguments for the shell
+ *
+ * This function processes command-line arguments passed to the shell.
+ * It specifically handles the -v option to print the shell version.
+ *
+ * @param argc The number of command-line arguments
+ * @param argv An array of strings containing the command-line arguments
+ * @return bool Returns true if the shell should exit after parsing (e.g., if -v was used),
+ *              false if the shell should continue normal operation
+ */
+  bool parse_args(int argc, char **argv);
 
+  /**
+   * @brief Print the command history of the shell
+   */
   void print_history();
 
+  /**
+   * @brief Initialize the job control system for the shell
+   */
   void initialize_jobs();
 
+  /**
+   * @brief Add a new job to the job list
+   *
+   * @param pid The process ID of the job
+   * @param command The command string of the job
+   * @param is_background Whether the job is running in the background
+   * @return The job ID of the newly added job
+   */
   int add_job(pid_t pid, char *command, bool is_background);
 
+  /**
+   * @brief Remove a job from the job list
+   *
+   * @param job_id The ID of the job to remove
+   */
   void remove_job(int job_id);
 
+  /**
+   * @brief Update the status of all jobs in the job list
+   */
   void update_job_status();
 
+  /**
+   * @brief Print the list of current jobs
+   */
   void print_jobs();
 
+  /**
+   * @brief Execute a command in the shell
+   *
+   * @param argv The argument vector containing the command and its arguments
+   * @param sh The shell structure
+   * @return The exit status of the executed command
+   */
   int execute_command(char **argv, struct shell *sh);
 
 #ifdef __cplusplus

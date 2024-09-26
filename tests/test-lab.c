@@ -34,8 +34,10 @@ void test_cmd_parse2(void)
      TEST_ASSERT_FALSE(actual[2]);
      free(expected[0]);
      free(expected[1]);
+     //added additional lines in "test-lab.c" because i could not run the tests without memory leaks
      cmd_free(actual);  
      free(expected);
+     //added additional lines in "test-lab.c" because i could not run the tests without memory leaks
      free(stng); 
 }
 
